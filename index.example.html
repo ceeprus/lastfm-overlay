@@ -60,13 +60,19 @@
             current = details;
 
             const albumCover = $("#album-cover");
-            albumCover.attr("src", details.image);
+            if (details.image) {
+                albumCover.attr("src", details.image);
 
-            albumCover.on("load", function () {
+                albumCover.on("load", function () {
+                    $("#track").html(details.title);
+                    $("#artist").html(details.artist);
+                    albumCover.show();
+                });
+            } else {
                 $("#track").html(details.title);
                 $("#artist").html(details.artist);
-                albumCover.show();
-            });
+                albumCover.hide();
+            }
         }
 
         setInterval(function () {

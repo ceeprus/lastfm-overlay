@@ -1,0 +1,136 @@
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zepto/1.2.0/zepto.min.js"
+        integrity="sha512-BrvVYNhKh6yST24E5DY/LopLO5d+8KYmIXyrpBIJ2PK+CyyJw/cLSG/BfJomWLC1IblNrmiJWGlrGueKLd/Ekw=="
+        crossorigin="anonymous"></script>
+
+    <script>
+        var api = "REPLACE ME"; // API key for last.fm
+        var username = "REPLACE ME"; // last.fm username
+        var time = 2; // in seconds
+
+        // This variable acts as the comparison value storing
+        // what's currently being showed, so we don't do a
+        // bunch of redundant renders
+        let current;
+
+        // Next, we call the last.fm API and pull a JSON response with our latest 1 track
+        function update(previous, onSuccess) {
+            fetch(
+                `http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=${username}&api_key=${api}&format=json&limit=1`
+            )
+                .then((response) => response.json())
+                .then((json) => {
+                    if (!json.recenttracks) {
+                        console.error("error fetching lastfm api:", json.message);
+                        return;
+                    }
+                    const trackSrc = json.recenttracks.track[0];
+
+                    const track = {
+                        title: trackSrc.name,
+                        artist: trackSrc.artist["#text"],
+                        album: trackSrc.album["#text"],
+                        image: trackSrc.image[2]["#text"], // Use the correct index for the medium image
+                    };
+
+                    // compare old vs new
+                    if (
+                        !!previous &&
+                        previous.title == track.title &&
+                        previous.album == track.album
+                    )
+                        return;
+
+                    console.info(`new track: ${track.title} - ${track.artist}`);
+                    return track;
+                })
+                .then(onSuccess)
+                .catch((e) => {
+                    console.error("error fetching lastfm api:", e);
+                    return;
+                });
+        }
+
+        // Now, we update our comparor and the html
+        function setNew(details) {
+            if (!details) return;
+            current = details;
+
+            const albumCover = $("#album-cover");
+            if (details.image) {
+                albumCover.attr("src", details.image);
+
+                albumCover.on("load", function () {
+                    $("#track").html(details.title);
+                    $("#artist").html(details.artist);
+                    albumCover.show();
+                });
+            } else {
+                $("#track").html(details.title);
+                $("#artist").html(details.artist);
+                albumCover.hide();
+            }
+        }
+
+        setInterval(function () {
+            update(current, setNew);
+        }, time * 1000);
+    </script>
+
+    <style>
+        html,
+        body {
+            font-size: 16px;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        h2,
+        h4 {
+            font-family: "Segoe UI", sans-serif;
+            padding: 0;
+            margin: 0;
+            text-transform: capitalize;
+        }
+
+        #widget {
+            background: transparent;
+            width: 500px;
+            position: relative;
+            left: 0px;
+            transition: 0.2s all ease;
+            overflow: hidden;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+
+        #album-cover {
+            width: 50px;
+            height: 50px;
+            margin-right: 1rem;
+            display: none;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            height: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <main id="widget">
+        <img id="album-cover" src="" alt="Album cover" />
+        <div>
+            <h2 id="track">Loading...</h2>
+            <h4 id="artist">Loading...</h4>
+        </div>
+    </main>
+</body>
+
+</html>
